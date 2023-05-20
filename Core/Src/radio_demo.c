@@ -1011,12 +1011,13 @@ int runRadio(void) {
 //#define  RK043FN48H_WIDTH    ((uint16_t)480)          /* LCD PIXEL WIDTH            */
 //#define  RK043FN48H_HEIGHT   ((uint16_t)272)          /* LCD PIXEL HEIGHT           */
 
-	uint32_t Im_size = RK043FN48H_WIDTH * RK043FN48H_HEIGHT *2/4; // size in 4-byte words
+	uint32_t Im_size_RGB565 = RK043FN48H_WIDTH * RK043FN48H_HEIGHT *2/4; // size in 4-byte words
 
     while (1) {
 // #pragma clang diagnostic pop
 
-		for (uint32_t pos=0; pos<Im_size; pos += payload_length){
+#define PAYLOAD_LENGTH 6
+		for (uint32_t pos=0; pos<Im_size_RGB565; pos++){
 
 #define no__DEBUG__
 #ifdef __DEBUG__
@@ -1024,14 +1025,15 @@ int runRadio(void) {
 		    uint32_t val =*(__IO uint32_t*)(4*pos+CAMERA_FRAME_BUFFER);
 #endif
 		    // Prepare data packet
-			payload_length = 8; // MANDATORY assigned at each packet sending
-	    	for (uint32_t i = 0; i < payload_length; i += 4) {
-	    		uint32_t offset=4*pos+i;
-	    		__IO uint32_t val =*(__IO uint32_t*)(offset+CAMERA_FRAME_BUFFER);
-	    		nRF24_payload[i+0] = val & 0xff;  val >>= 8;
-	    		nRF24_payload[i+1] = val & 0xff;  val >>= 8;
-	    		nRF24_payload[i+2] = val & 0xff;  val >>= 8;
-	    		nRF24_payload[i+3] = val & 0xff;
+			payload_length = PAYLOAD_LENGTH; // MANDATORY assigned at each packet sending
+			uint32_t val = pos;
+			nRF24_payload[0] = val & 0xff; val >>= 8;
+			nRF24_payload[1] = val & 0xff;
+
+			val =*(__IO uint32_t*)(4*pos+CAMERA_FRAME_BUFFER);
+
+	    	for (uint32_t i = 2; i < payload_length; i++) {
+	    		nRF24_payload[i] = val & 0xff;  val >>= 8;
 	    	}
 
 	    	// Print a payload
@@ -1070,6 +1072,7 @@ int runRadio(void) {
 			UART_SendStr("\r\n");
 
 	    	// Wait ~0.5s -> 10ms
+//			Delay_ms(1000);
 	    	Delay_ms(10);
 			Toggle_LED();
 
